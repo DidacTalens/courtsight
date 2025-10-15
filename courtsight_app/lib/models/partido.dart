@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'equipo.dart';
+import 'parcial.dart';
 
 enum EstadoPartido {
   configuracion,
@@ -31,6 +32,7 @@ class Partido extends Equatable {
   final int tiempoTranscurrido; // En segundos
   final int marcadorLocal;
   final int marcadorVisitante;
+  final List<Parcial> parciales;
   final String? equipoEnAtaque;
   final DateTime fechaCreacion;
   final DateTime? fechaFinalizacion;
@@ -45,6 +47,7 @@ class Partido extends Equatable {
     required this.tiempoTranscurrido,
     required this.marcadorLocal,
     required this.marcadorVisitante,
+    required this.parciales,
     this.equipoEnAtaque,
     required this.fechaCreacion,
     this.fechaFinalizacion,
@@ -56,6 +59,16 @@ class Partido extends Equatable {
     int duracionMinutos = 60,
   }) {
     final now = DateTime.now();
+
+    // Inicializar parciales de 5 minutos
+    final parciales = <Parcial>[];
+    for (int i = 0; i < duracionMinutos; i += 5) {
+      parciales.add(Parcial.create(
+        minutoInicio: i,
+        minutoFin: (i + 5).clamp(0, duracionMinutos),
+      ));
+    }
+
     return Partido(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       fecha: now,
@@ -66,6 +79,7 @@ class Partido extends Equatable {
       tiempoTranscurrido: 0,
       marcadorLocal: 0,
       marcadorVisitante: 0,
+      parciales: parciales,
       equipoEnAtaque: equipoLocal.id,
       fechaCreacion: now,
     );
@@ -81,6 +95,7 @@ class Partido extends Equatable {
     int? tiempoTranscurrido,
     int? marcadorLocal,
     int? marcadorVisitante,
+    List<Parcial>? parciales,
     String? equipoEnAtaque,
     DateTime? fechaCreacion,
     DateTime? fechaFinalizacion,
@@ -95,6 +110,7 @@ class Partido extends Equatable {
       tiempoTranscurrido: tiempoTranscurrido ?? this.tiempoTranscurrido,
       marcadorLocal: marcadorLocal ?? this.marcadorLocal,
       marcadorVisitante: marcadorVisitante ?? this.marcadorVisitante,
+      parciales: parciales ?? this.parciales,
       equipoEnAtaque: equipoEnAtaque ?? this.equipoEnAtaque,
       fechaCreacion: fechaCreacion ?? this.fechaCreacion,
       fechaFinalizacion: fechaFinalizacion ?? this.fechaFinalizacion,
@@ -112,6 +128,7 @@ class Partido extends Equatable {
         tiempoTranscurrido,
         marcadorLocal,
         marcadorVisitante,
+        parciales,
         equipoEnAtaque,
         fechaCreacion,
         fechaFinalizacion,
@@ -139,6 +156,15 @@ class Partido extends Equatable {
   bool get estaPausado => estado == EstadoPartido.pausado;
   
   bool get equipoLocalAtacando => equipoEnAtaque == equipoLocal.id;
+
+  Parcial? get parcialActual {
+    return parciales.cast<Parcial?>().firstWhere(
+      (parcial) => parcial != null &&
+          minutoActual >= parcial.minutoInicio &&
+          minutoActual < parcial.minutoFin,
+      orElse: () => null,
+    );
+  }
 
   @override
   String toString() {
