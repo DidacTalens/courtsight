@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
+import 'package:courtsight/models/jugador.dart';
 
 class Equipo extends Equatable {
   final String id;
@@ -7,6 +8,7 @@ class Equipo extends Equatable {
   final String colorUniforme;
   final String colorPortero;
   final bool esLocal;
+  final List<Jugador> roster;
 
   const Equipo({
     required this.id,
@@ -14,6 +16,7 @@ class Equipo extends Equatable {
     required this.colorUniforme,
     required this.colorPortero,
     required this.esLocal,
+    this.roster = const [],
   });
 
   factory Equipo.create({
@@ -21,6 +24,7 @@ class Equipo extends Equatable {
     String colorUniforme = '#FF0000',
     String colorPortero = '#00FF00',
     bool esLocal = true,
+    List<Jugador> roster = const [],
   }) {
     return Equipo(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -28,16 +32,17 @@ class Equipo extends Equatable {
       colorUniforme: colorUniforme,
       colorPortero: colorPortero,
       esLocal: esLocal,
+      roster: List<Jugador>.unmodifiable(roster),
     );
   }
 
   factory Equipo.empty({bool esLocal = true}) {
-    return Equipo(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+    return Equipo.create(
       nombre: '',
       colorUniforme: esLocal ? '#FF0000' : '#0000FF',
       colorPortero: '#00FF00',
       esLocal: esLocal,
+      roster: const [],
     );
   }
 
@@ -47,6 +52,7 @@ class Equipo extends Equatable {
     String? colorUniforme,
     String? colorPortero,
     bool? esLocal,
+    List<Jugador>? roster,
   }) {
     return Equipo(
       id: id ?? this.id,
@@ -54,8 +60,13 @@ class Equipo extends Equatable {
       colorUniforme: colorUniforme ?? this.colorUniforme,
       colorPortero: colorPortero ?? this.colorPortero,
       esLocal: esLocal ?? this.esLocal,
+      roster: roster != null ? List<Jugador>.unmodifiable(roster) : this.roster,
     );
   }
+
+  String get _rosterSignature => roster
+      .map((jugador) => '${jugador.id}:${jugador.nombre}:${jugador.dorsal}')
+      .join('|');
 
   @override
   List<Object?> get props => [
@@ -64,6 +75,7 @@ class Equipo extends Equatable {
         colorUniforme,
         colorPortero,
         esLocal,
+        _rosterSignature,
       ];
 
   // Getters de utilidad
@@ -85,6 +97,6 @@ class Equipo extends Equatable {
 
   @override
   String toString() {
-    return 'Equipo(id: $id, nombre: $nombre)';
+    return 'Equipo(id: $id, nombre: $nombre, roster: ${roster.length})';
   }
 }

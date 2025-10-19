@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:courtsight/models/models.dart' as models;
 
 // Definición de colores oscuros para replicar el diseño
 const Color primaryDark = Color(0xFF0A1931);
@@ -10,25 +11,53 @@ const Color successColor = Color(0xFF28A745); // Verde para Gol/Éxito
 // --- WIDGET PRINCIPAL: MatchView ---
 
 class MatchView extends StatefulWidget {
-  const MatchView({super.key});
+  const MatchView({super.key, required this.partido});
+
+  final models.Partido partido;
 
   @override
   State<MatchView> createState() => _MatchViewState();
 }
 
 class _MatchViewState extends State<MatchView> {
-  // Simulación de estados del partido
-  int _marcadorLocal = 15;
-  int _marcadorVisitante = 12;
-  String _tiempoTranscurrido = '45:17'; // Tiempo total
-  bool _localIsAttacking = true; // Controla la dirección de la flecha
+  late models.Partido _partido;
+  late models.Equipo _equipoLocal;
+  late models.Equipo _equipoVisitante;
 
-  // Simulación de datos de parciales (Tabla central)
-  final List<String> _parcialesLocal = ['3', '5', '2', '4', '1', '-'];
-  final List<String> _parcialesVisitante = ['2', '4', '3', '2', '1', '-'];
-  final List<String> _parcialLabels = ['0-5\'', '5-10\'', '10-15\'', '15-20\'', '20-25\'', '25-30\''];
+  late int _marcadorLocal;
+  late int _marcadorVisitante;
+  late String _tiempoTranscurrido;
+  late bool _localIsAttacking;
 
-  // Función para simular el cambio de posesión
+  late List<String> _parcialesLocal;
+  late List<String> _parcialesVisitante;
+  late List<String> _parcialLabels;
+
+  @override
+  void initState() {
+    super.initState();
+    _partido = widget.partido;
+    _equipoLocal = _partido.equipoLocal;
+    _equipoVisitante = _partido.equipoVisitante;
+
+    _marcadorLocal = _partido.marcadorLocal;
+    _marcadorVisitante = _partido.marcadorVisitante;
+    _tiempoTranscurrido = _partido.tiempoFormateado;
+    _localIsAttacking = _partido.equipoEnAtaque == _equipoLocal.id;
+
+    final parciales = _partido.parciales;
+    if (parciales.isEmpty) {
+      _parcialesLocal = const [];
+      _parcialesVisitante = const [];
+      _parcialLabels = const [];
+    } else {
+      _parcialesLocal = parciales.map((p) => p.golesLocal.toString()).toList();
+      _parcialesVisitante =
+          parciales.map((p) => p.golesVisitante.toString()).toList();
+      _parcialLabels = parciales.map((p) => p.rangoTiempo).toList();
+    }
+  }
+
   void _togglePossession() {
     setState(() {
       _localIsAttacking = !_localIsAttacking;
@@ -49,7 +78,7 @@ class _MatchViewState extends State<MatchView> {
                 children: [
                   // 1. Encabezado del Marcador
                   _buildScoreHeader(),
-                  
+
                   // 2. Tabla de Parciales
                   _buildParcialsTable(),
                   const SizedBox(height: 20),
@@ -80,49 +109,71 @@ class _MatchViewState extends State<MatchView> {
 
   Widget _buildScoreHeader() {
     return Padding(
-      padding: const EdgeInsets.only(top: 10.0, left: 16.0, right: 16.0, bottom: 5.0),
+      padding: const EdgeInsets.only(
+          top: 10.0, left: 16.0, right: 16.0, bottom: 5.0),
       child: Column(
         children: [
-          // Nombres de Equipo y Marcador Principal
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Equipo Local
-              const Row(
+              Row(
                 children: [
-                  Icon(Icons.circle, size: 8, color: accentColor), // Punto de posesión simulado
-                  SizedBox(width: 8),
-                  Text('Equipo A', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                  Icon(Icons.circle,
+                      size: 8,
+                      color: _localIsAttacking ? accentColor : Colors.white38),
+                  const SizedBox(width: 8),
+                  Text(
+                      _equipoLocal.nombre.isEmpty
+                          ? 'Equipo Local'
+                          : _equipoLocal.nombre,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold)),
                 ],
               ),
-              
-              // Marcador
               Expanded(
-                child: Text('$_marcadorLocal - $_marcadorVisitante', 
-                  textAlign: TextAlign.center, 
-                  style: const TextStyle(color: Colors.white, fontSize: 48, fontWeight: FontWeight.w900, fontFamily: 'RobotoMono')
-                ),
+                child: Text('$_marcadorLocal - $_marcadorVisitante',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 48,
+                        fontWeight: FontWeight.w900,
+                        fontFamily: 'RobotoMono')),
               ),
-              
-              // Equipo Visitante
-              const Row(
+              Row(
                 children: [
-                  Text('Equipo B', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-                  SizedBox(width: 8),
-                  Icon(Icons.circle, size: 8, color: errorColor), // Punto de posesión simulado
+                  Text(
+                      _equipoVisitante.nombre.isEmpty
+                          ? 'Equipo Visitante'
+                          : _equipoVisitante.nombre,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold)),
+                  const SizedBox(width: 8),
+                  Icon(Icons.circle,
+                      size: 8,
+                      color: !_localIsAttacking ? accentColor : Colors.white38),
                 ],
               ),
             ],
           ),
-          
-          // Tiempo Transcurrido
-          Text(_tiempoTranscurrido, style: const TextStyle(color: Colors.white70, fontSize: 24, fontFamily: 'RobotoMono')),
+          Text(_tiempoTranscurrido,
+              style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 24,
+                  fontFamily: 'RobotoMono')),
         ],
       ),
     );
   }
 
   Widget _buildParcialsTable() {
+    if (_parcialLabels.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
       padding: const EdgeInsets.all(8.0),
@@ -132,36 +183,52 @@ class _MatchViewState extends State<MatchView> {
       ),
       child: Column(
         children: [
-          // Fila de Encabezado (0-5', 5-10', etc.)
           Row(
             children: [
-              const SizedBox(width: 80), // Espacio para la etiqueta "Equipo"
-              ..._parcialLabels.map((label) => Expanded(
-                child: Text(label, textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-              )),
+              const SizedBox(width: 80),
+              ..._parcialLabels.map(
+                (label) => Expanded(
+                  child: Text(label,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                ),
+              ),
             ],
           ),
           const Divider(color: Colors.white10, height: 10),
-
-          // Fila del Equipo A (Local)
-          _buildParcialRow('Equipo A', _parcialesLocal, accentColor),
-
-          // Fila del Equipo B (Visitante)
-          _buildParcialRow('Equipo B', _parcialesVisitante, Colors.yellow),
+          _buildParcialRow(
+            _equipoLocal.nombre.isEmpty ? 'Equipo Local' : _equipoLocal.nombre,
+            _parcialesLocal,
+            accentColor,
+          ),
+          _buildParcialRow(
+            _equipoVisitante.nombre.isEmpty
+                ? 'Equipo Visitante'
+                : _equipoVisitante.nombre,
+            _parcialesVisitante,
+            Colors.yellow,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildParcialRow(String teamName, List<String> scores, Color teamColor) {
+  Widget _buildParcialRow(
+      String teamName, List<String> scores, Color teamColor) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
         children: [
-          SizedBox(width: 80, child: Text(teamName, style: TextStyle(color: teamColor, fontWeight: FontWeight.bold))),
+          SizedBox(
+              width: 80,
+              child: Text(teamName,
+                  style: TextStyle(
+                      color: teamColor, fontWeight: FontWeight.bold))),
           ...scores.map((score) => Expanded(
-            child: Text(score, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70)),
-          )),
+                child: Text(score,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white70)),
+              )),
         ],
       ),
     );
@@ -190,7 +257,8 @@ class _MatchViewState extends State<MatchView> {
 
               // ICONO DE PORTERO LOCAL (G1)
               Positioned(
-                left: MediaQuery.of(context).size.width * 0.05, // Posicionamiento relativo
+                left: MediaQuery.of(context).size.width *
+                    0.05, // Posicionamiento relativo
                 child: _buildKeeperIcon('G1', Colors.blue, true),
               ),
 
@@ -199,12 +267,15 @@ class _MatchViewState extends State<MatchView> {
                 right: MediaQuery.of(context).size.width * 0.05,
                 child: _buildKeeperIcon('G2', Colors.yellow, false),
               ),
-              
+
               // FLECHA DE POSESIÓN
               AnimatedRotation(
-                turns: _localIsAttacking ? 0.0 : 0.5, // 0.0 para derecha, 0.5 para izquierda
+                turns: _localIsAttacking
+                    ? 0.0
+                    : 0.5, // 0.0 para derecha, 0.5 para izquierda
                 duration: const Duration(milliseconds: 300),
-                child: const Icon(Icons.arrow_forward, color: accentColor, size: 50),
+                child: const Icon(Icons.arrow_forward,
+                    color: accentColor, size: 50),
               ),
             ],
           ),
@@ -214,15 +285,18 @@ class _MatchViewState extends State<MatchView> {
   }
 
   Widget _buildKeeperIcon(String name, Color color, bool isLocal) {
+    final displayColor = isLocal
+        ? _equipoLocal.colorPorteroColor
+        : _equipoVisitante.colorPorteroColor;
     return GestureDetector(
       onTap: () {
         // TODO: Abrir modal para cambiar de portero
-        print('Abrir selector de portero para $name');
+        debugPrint('Abrir selector de portero para $name');
       },
       child: Column(
         children: [
-          Icon(Icons.sports_soccer, color: color, size: 40), // Simula camiseta de manga larga
-          Text(name, style: TextStyle(color: color, fontSize: 12)),
+          Icon(Icons.sports_soccer, color: displayColor, size: 40),
+          Text(name, style: TextStyle(color: displayColor, fontSize: 12)),
         ],
       ),
     );
@@ -235,17 +309,29 @@ class _MatchViewState extends State<MatchView> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildActionButton(Icons.score, '7m', successColor, () { /* TODO: Modal 7m */ print('Modal 7m'); }),
-          _buildActionButton(Icons.warning_amber_rounded, 'Amonestación', Colors.orange, () { /* TODO: Modal Amonestación */ print('Modal Amonestación'); }),
-          _buildActionButton(Icons.sports_handball, 'Lanzamiento', Colors.teal, () { /* TODO: Modal Lanzamiento */ print('Modal Lanzamiento'); }),
-          _buildActionButton(Icons.swap_horiz, 'Posesión', Colors.purple, _togglePossession), // Usa la función de cambio de posesión
-          _buildActionButton(Icons.timer_off, 'Tiempo Muerto', errorColor, () { /* TODO: Lógica Tiempo Muerto */ print('Tiempo Muerto'); }),
+          _buildActionButton(Icons.score, '7m', successColor, () {
+            /* TODO: Modal 7m */ print('Modal 7m');
+          }),
+          _buildActionButton(
+              Icons.warning_amber_rounded, 'Amonestación', Colors.orange, () {
+            /* TODO: Modal Amonestación */ print('Modal Amonestación');
+          }),
+          _buildActionButton(Icons.sports_handball, 'Lanzamiento', Colors.teal,
+              () {
+            /* TODO: Modal Lanzamiento */ print('Modal Lanzamiento');
+          }),
+          _buildActionButton(Icons.swap_horiz, 'Posesión', Colors.purple,
+              _togglePossession), // Usa la función de cambio de posesión
+          _buildActionButton(Icons.timer_off, 'Tiempo Muerto', errorColor, () {
+            /* TODO: Lógica Tiempo Muerto */ print('Tiempo Muerto');
+          }),
         ],
       ),
     );
   }
 
-  Widget _buildActionButton(IconData icon, String label, Color color, VoidCallback onPressed) {
+  Widget _buildActionButton(
+      IconData icon, String label, Color color, VoidCallback onPressed) {
     return Column(
       children: [
         InkWell(
@@ -263,7 +349,8 @@ class _MatchViewState extends State<MatchView> {
           ),
         ),
         const SizedBox(height: 4),
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+        Text(label,
+            style: const TextStyle(color: Colors.white70, fontSize: 12)),
       ],
     );
   }
@@ -278,9 +365,14 @@ class _MatchViewState extends State<MatchView> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Historial de Acciones', 
-                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-              IconButton(onPressed: (){ /* TODO: Lógica de Edición */ }, icon: const Icon(Icons.edit, color: Colors.grey, size: 18))
+              const Text('Historial de Acciones',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold)),
+              IconButton(
+                  onPressed: () {/* TODO: Lógica de Edición */},
+                  icon: const Icon(Icons.edit, color: Colors.grey, size: 18))
             ],
           ),
           const Divider(color: Colors.white10),
@@ -290,13 +382,18 @@ class _MatchViewState extends State<MatchView> {
             child: ListView(
               reverse: true, // Mostrar las más recientes abajo
               children: [
-                _buildHistoryTile('Gol - Equipo A ( Jugador 10 )', '44:58', successColor),
-                _buildHistoryTile('Amonestación - Equipo B ( 5 )', '43:12', Colors.orange),
-                _buildHistoryTile('Pérdida - Equipo A ( 7 )', '42:30', errorColor),
-                _buildHistoryTile('Gol - Equipo B ( 9 )', '41:05', successColor),
-                _buildHistoryTile('Gol - Equipo A ( 10 )', '39:45', successColor),
+                _buildHistoryTile(
+                    'Gol - Equipo A ( Jugador 10 )', '44:58', successColor),
+                _buildHistoryTile(
+                    'Amonestación - Equipo B ( 5 )', '43:12', Colors.orange),
+                _buildHistoryTile(
+                    'Pérdida - Equipo A ( 7 )', '42:30', errorColor),
+                _buildHistoryTile(
+                    'Gol - Equipo B ( 9 )', '41:05', successColor),
+                _buildHistoryTile(
+                    'Gol - Equipo A ( 10 )', '39:45', successColor),
                 // Añadir más tiles aquí para simular el scroll
-                for (int i = 1; i < 20; i++) 
+                for (int i = 1; i < 20; i++)
                   _buildHistoryTile('Acción $i', '0$i:00', Colors.grey)
               ],
             ),
@@ -309,7 +406,8 @@ class _MatchViewState extends State<MatchView> {
               print('Abrir estadísticas en tiempo real');
             },
             icon: const Icon(Icons.bar_chart, color: Colors.white70),
-            label: const Text('Estadísticas en tiempo real', style: TextStyle(color: Colors.white70)),
+            label: const Text('Estadísticas en tiempo real',
+                style: TextStyle(color: Colors.white70)),
           ),
         ],
       ),
@@ -323,20 +421,21 @@ class _MatchViewState extends State<MatchView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 5, 
-            height: 35, 
+            width: 5,
+            height: 35,
             decoration: BoxDecoration(
-              color: color, 
-              borderRadius: BorderRadius.circular(2)
-            ),
+                color: color, borderRadius: BorderRadius.circular(2)),
             margin: const EdgeInsets.only(right: 8),
           ),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(action, style: const TextStyle(color: Colors.white, fontSize: 13)),
-                Text(time, style: TextStyle(color: color.withOpacity(0.7), fontSize: 10)),
+                Text(action,
+                    style: const TextStyle(color: Colors.white, fontSize: 13)),
+                Text(time,
+                    style:
+                        TextStyle(color: color.withOpacity(0.7), fontSize: 10)),
               ],
             ),
           ),
@@ -367,7 +466,7 @@ class HandballPitchPainter extends CustomPainter {
 
     // Zonas de 6m (aproximado, como semicírculos)
     final double r = w * 0.1; // Radio aproximado para la zona
-    
+
     // Zona de 6m izquierda
     canvas.drawArc(
       Rect.fromCenter(center: Offset(0, h / 2), width: r * 2, height: h),
@@ -376,7 +475,7 @@ class HandballPitchPainter extends CustomPainter {
       false,
       linePaint,
     );
-    
+
     // Zona de 6m derecha
     canvas.drawArc(
       Rect.fromCenter(center: Offset(w, h / 2), width: r * 2, height: h),

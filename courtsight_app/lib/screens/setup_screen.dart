@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:courtsight/models/models.dart' as models;
+import 'package:courtsight/screens/match_screen.dart';
+import 'package:courtsight/models/jugador.dart' as models;
 
 class SetupScreen extends StatelessWidget {
   const SetupScreen({super.key});
@@ -35,13 +39,6 @@ class CamisetaLargaIcon extends StatelessWidget {
   }
 }
 
-// --- CLASE DE MODELO PARA JUGADORES ---
-class Jugador {
-  String nombre;
-  String dorsal;
-  Jugador({this.nombre = '', this.dorsal = ''});
-}
-
 // --- WIDGET PRINCIPAL: SetupView ---
 
 class SetupView extends StatefulWidget {
@@ -59,12 +56,16 @@ class _SetupViewState extends State<SetupView> {
   Color _visitorKeeperColor = Colors.yellow;
 
   // Controladores de texto para los nombres de los equipos
-  final TextEditingController _localNameController = TextEditingController(text: 'Equipo Local');
-  final TextEditingController _visitorNameController = TextEditingController(text: 'Equipo Visitante');
+  final TextEditingController _localNameController =
+      TextEditingController(text: 'Equipo Local');
+  final TextEditingController _visitorNameController =
+      TextEditingController(text: 'Equipo Visitante');
 
   // Listas de jugadores
-  List<Jugador> _localRoster = [Jugador(), Jugador(), Jugador()];
-  List<Jugador> _visitorRoster = [Jugador(), Jugador(), Jugador()];
+  List<models.Jugador> _localRoster =
+      List<models.Jugador>.generate(3, (_) => models.Jugador.empty());
+  List<models.Jugador> _visitorRoster =
+      List<models.Jugador>.generate(3, (_) => models.Jugador.empty());
 
   // Definición de colores oscuros para replicar el diseño
   final Color primaryDark = const Color(0xFF0A1931);
@@ -78,43 +79,186 @@ class _SetupViewState extends State<SetupView> {
     super.dispose();
   }
 
-  // Función simulada para abrir un selector de color
-  void _selectColor(bool isLocal, bool isPlayer) {
-    // Nota: En una app real, aquí se usaría un paquete como flutter_colorpicker
-    setState(() {
-      if (isLocal) {
-        if (isPlayer) {
-          _localPlayerColor = isPlayer ? Colors.red.shade900 : Colors.red.shade900;
+  static const List<Color> _uniformPalette = [
+    Color(0xFFF44336),
+    Color(0xFFE91E63),
+    Color(0xFF9C27B0),
+    Color(0xFF3F51B5),
+    Color(0xFF03A9F4),
+    Color(0xFF009688),
+    Color(0xFF4CAF50),
+    Color(0xFFFFC107),
+    Color(0xFFFF9800),
+    Color(0xFFFF5722),
+    Color(0xFF795548),
+    Color(0xFF607D8B),
+  ];
+
+  Future<void> _selectColor(bool isLocal, bool isPlayer) async {
+    final Color initialColor;
+    if (isLocal) {
+      initialColor = isPlayer ? _localPlayerColor : _localKeeperColor;
+    } else {
+      initialColor = isPlayer ? _visitorPlayerColor : _visitorKeeperColor;
+    }
+
+    Color tempColor = initialColor;
+
+    final selectedColor = await showDialog<Color>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(builder: (context, setStateDialog) {
+          return AlertDialog(
+            backgroundColor: cardColor,
+            title: Text(
+              'Selecciona color ${isPlayer ? 'jugadores' : 'portero'} ${isLocal ? 'local' : 'visitante'}',
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+            content: SingleChildScrollView(
+              child: BlockPicker(
+                pickerColor: tempColor,
+                onColorChanged: (color) {
+                  setStateDialog(() => tempColor = color);
+                },
+                availableColors: _uniformPalette,
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(tempColor),
+                child: const Text('Guardar'),
+              ),
+            ],
+          );
+        });
+      },
+    );
+
+    if (selectedColor != null) {
+      setState(() {
+        if (isLocal) {
+          if (isPlayer) {
+            _localPlayerColor = selectedColor;
+          } else {
+            _localKeeperColor = selectedColor;
+          }
         } else {
-          _localKeeperColor = isPlayer ? Colors.green.shade900 : Colors.green.shade900;
+          if (isPlayer) {
+            _visitorPlayerColor = selectedColor;
+          } else {
+            _visitorKeeperColor = selectedColor;
+          }
         }
-      } else {
-        if (isPlayer) {
-          _visitorPlayerColor = isPlayer ? Colors.blue.shade900 : Colors.blue.shade900;
-        } else {
-          _visitorKeeperColor = isPlayer ? Colors.yellow.shade900 : Colors.yellow.shade900;
-        }
-      }
-    });
+      });
+    }
   }
 
   // Función para añadir un nuevo jugador
   void _addJugador(bool isLocal) {
     setState(() {
+      final nuevo = models.Jugador.empty();
       if (isLocal) {
-        _localRoster.add(Jugador());
+        _localRoster = [..._localRoster, nuevo];
       } else {
-        _visitorRoster.add(Jugador());
+        _visitorRoster = [..._visitorRoster, nuevo];
       }
     });
   }
 
+  void _updateJugador({
+    required bool isLocal,
+    required int index,
+    String? nombre,
+    String? dorsal,
+  }) {
+    setState(() {
+      final roster = isLocal ? _localRoster : _visitorRoster;
+      if (index < 0 || index >= roster.length) {
+        return;
+      }
+
+      final models.Jugador original = roster[index];
+      final models.Jugador actualizado = original.copyWith(
+        nombre: nombre ?? original.nombre,
+        dorsal: dorsal ?? original.dorsal,
+      );
+
+      final updatedRoster = List<models.Jugador>.from(roster);
+      updatedRoster[index] = actualizado;
+
+      if (isLocal) {
+        _localRoster = updatedRoster;
+      } else {
+        _visitorRoster = updatedRoster;
+      }
+    });
+  }
+
+  models.Equipo _buildEquipo({
+    required bool esLocal,
+    required String nombre,
+    required Color colorJugadores,
+    required Color colorPortero,
+    required List<models.Jugador> roster,
+  }) {
+    String toHex(Color color) =>
+        '#${color.value.toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
+
+    final jugadoresFiltrados = roster
+        .where((jugador) =>
+            jugador.nombre.trim().isNotEmpty &&
+            jugador.dorsal.trim().isNotEmpty)
+        .map((jugador) => jugador)
+        .toList();
+
+    return models.Equipo.create(
+      nombre: nombre.trim(),
+      colorUniforme: toHex(colorJugadores),
+      colorPortero: toHex(colorPortero),
+      esLocal: esLocal,
+      roster: jugadoresFiltrados,
+    );
+  }
+
+  models.Partido _buildPartido() {
+    final equipoLocal = _buildEquipo(
+      esLocal: true,
+      nombre: _localNameController.text,
+      colorJugadores: _localPlayerColor,
+      colorPortero: _localKeeperColor,
+      roster: _localRoster,
+    );
+
+    final equipoVisitante = _buildEquipo(
+      esLocal: false,
+      nombre: _visitorNameController.text,
+      colorJugadores: _visitorPlayerColor,
+      colorPortero: _visitorKeeperColor,
+      roster: _visitorRoster,
+    );
+
+    return models.Partido.create(
+      equipoLocal: equipoLocal,
+      equipoVisitante: equipoVisitante,
+    );
+  }
+
   // Verifica si el botón Iniciar Partido debe estar activo
   bool get _isReadyToStart {
-    return _localNameController.text.isNotEmpty &&
-        _visitorNameController.text.isNotEmpty &&
-        (_localRoster.any((j) => j.nombre.isNotEmpty) || _localRoster.length > 0) &&
-        (_visitorRoster.any((j) => j.nombre.isNotEmpty) || _visitorRoster.length > 0);
+    bool tieneJugadoresCompletos(List<models.Jugador> roster) {
+      return roster.any((jugador) =>
+          jugador.nombre.trim().isNotEmpty && jugador.dorsal.trim().isNotEmpty);
+    }
+
+    return _localNameController.text.trim().isNotEmpty &&
+        _visitorNameController.text.trim().isNotEmpty &&
+        tieneJugadoresCompletos(_localRoster) &&
+        tieneJugadoresCompletos(_visitorRoster);
   }
 
   @override
@@ -125,7 +269,8 @@ class _SetupViewState extends State<SetupView> {
         backgroundColor: primaryDark,
         elevation: 0,
         centerTitle: true,
-        title: const Text('Preparación del Partido', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text('Preparación del Partido',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -135,7 +280,8 @@ class _SetupViewState extends State<SetupView> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: _buildTeamConfigPanel(
+                Expanded(
+                    child: _buildTeamConfigPanel(
                   isLocal: true,
                   nameController: _localNameController,
                   playerColor: _localPlayerColor,
@@ -145,7 +291,8 @@ class _SetupViewState extends State<SetupView> {
                   cardColor: cardColor,
                 )),
                 const SizedBox(width: 16),
-                Expanded(child: _buildTeamConfigPanel(
+                Expanded(
+                    child: _buildTeamConfigPanel(
                   isLocal: false,
                   nameController: _visitorNameController,
                   playerColor: _visitorPlayerColor,
@@ -173,7 +320,7 @@ class _SetupViewState extends State<SetupView> {
     required TextEditingController nameController,
     required Color playerColor,
     required Color keeperColor,
-    required List<Jugador> roster,
+    required List<models.Jugador> roster,
     required String title,
     required Color cardColor,
   }) {
@@ -187,11 +334,18 @@ class _SetupViewState extends State<SetupView> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Título del Equipo
-          Text(title, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
 
           // Selector de Colores (Camisetas)
-          const Text('COLOR DE LAS CAMISETAS', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 10)),
+          const Text('COLOR DE LAS CAMISETAS',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey, fontSize: 10)),
           const SizedBox(height: 8),
 
           Row(
@@ -199,21 +353,35 @@ class _SetupViewState extends State<SetupView> {
             children: [
               // Camiseta Corta (Jugador)
               GestureDetector(
+                key: ValueKey(
+                    'color-picker-${isLocal ? 'local' : 'visitante'}-jugadores'),
                 onTap: () => _selectColor(isLocal, true),
                 child: Column(
                   children: [
-                    CamisetaCortaIcon(color: playerColor),
-                    const Text('Jugador', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    CamisetaCortaIcon(
+                      key: ValueKey(
+                          'icon-${isLocal ? 'local' : 'visitante'}-jugador'),
+                      color: playerColor,
+                    ),
+                    const Text('Jugador',
+                        style: TextStyle(color: Colors.white70, fontSize: 12)),
                   ],
                 ),
               ),
               // Camiseta Larga (Portero)
               GestureDetector(
+                key: ValueKey(
+                    'color-picker-${isLocal ? 'local' : 'visitante'}-portero'),
                 onTap: () => _selectColor(isLocal, false),
                 child: Column(
                   children: [
-                    CamisetaLargaIcon(color: keeperColor),
-                    const Text('Portero', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    CamisetaLargaIcon(
+                      key: ValueKey(
+                          'icon-${isLocal ? 'local' : 'visitante'}-portero'),
+                      color: keeperColor,
+                    ),
+                    const Text('Portero',
+                        style: TextStyle(color: Colors.white70, fontSize: 12)),
                   ],
                 ),
               ),
@@ -223,6 +391,9 @@ class _SetupViewState extends State<SetupView> {
 
           // Campo de Nombre del Equipo (Para consistencia visual, aunque no está en la imagen, es útil)
           TextField(
+            key: isLocal
+                ? const Key('input-equipo-local-nombre')
+                : const Key('input-equipo-visitante-nombre'),
             controller: nameController,
             onChanged: (_) => setState(() {}),
             style: const TextStyle(color: Colors.white),
@@ -231,15 +402,16 @@ class _SetupViewState extends State<SetupView> {
               hintStyle: const TextStyle(color: Colors.grey),
               filled: true,
               fillColor: primaryDark.withOpacity(0.5),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             ),
           ),
           const SizedBox(height: 20),
 
           // Lista de Jugadores (ListView.builder dentro de un SizedBox/Container para la altura)
           ...roster.asMap().entries.map((entry) {
-            int index = entry.key;
-            Jugador jugador = entry.value;
+            final int index = entry.key;
+            final models.Jugador jugador = entry.value;
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
@@ -247,20 +419,44 @@ class _SetupViewState extends State<SetupView> {
                 children: [
                   Expanded(
                     flex: 4,
-                    child: TextField(
-                      onChanged: (value) => jugador.nombre = value,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: _inputDecoration('Nombre del Jugador'),
+                    child: KeyedSubtree(
+                      key: ValueKey(
+                          '${isLocal ? 'local' : 'visitante'}-${jugador.id}-nombre'),
+                      child: TextFormField(
+                        key: isLocal
+                            ? Key('input-jugador-$index-nombre')
+                            : Key('input-visitante-jugador-$index-nombre'),
+                        initialValue: jugador.nombre,
+                        onChanged: (value) => _updateJugador(
+                          isLocal: isLocal,
+                          index: index,
+                          nombre: value,
+                        ),
+                        style: const TextStyle(color: Colors.white),
+                        decoration: _inputDecoration('Nombre del Jugador'),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     flex: 2,
-                    child: TextField(
-                      onChanged: (value) => jugador.dorsal = value,
-                      keyboardType: TextInputType.number,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: _inputDecoration('Dorsal'),
+                    child: KeyedSubtree(
+                      key: ValueKey(
+                          '${isLocal ? 'local' : 'visitante'}-${jugador.id}-dorsal'),
+                      child: TextFormField(
+                        key: isLocal
+                            ? Key('input-jugador-$index-dorsal')
+                            : Key('input-visitante-jugador-$index-dorsal'),
+                        initialValue: jugador.dorsal,
+                        onChanged: (value) => _updateJugador(
+                          isLocal: isLocal,
+                          index: index,
+                          dorsal: value,
+                        ),
+                        keyboardType: TextInputType.number,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: _inputDecoration('Dorsal'),
+                      ),
                     ),
                   ),
                 ],
@@ -272,7 +468,8 @@ class _SetupViewState extends State<SetupView> {
           TextButton.icon(
             onPressed: () => _addJugador(isLocal),
             icon: const Icon(Icons.add_circle, color: Colors.blueAccent),
-            label: const Text('Añadir Jugador', style: TextStyle(color: Colors.blueAccent)),
+            label: const Text('Añadir Jugador',
+                style: TextStyle(color: Colors.blueAccent)),
           ),
         ],
       ),
@@ -289,7 +486,8 @@ class _SetupViewState extends State<SetupView> {
       fillColor: primaryDark.withOpacity(0.5),
       isDense: true,
       contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide.none),
+      border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6), borderSide: BorderSide.none),
     );
   }
 
@@ -301,16 +499,25 @@ class _SetupViewState extends State<SetupView> {
       child: ElevatedButton(
         onPressed: _isReadyToStart
             ? () {
-                // TODO: Navegar a MatchView (Vista de Partido)
-                print('Iniciando Partido con Local: ${_localNameController.text} vs Visitante: ${_visitorNameController.text}');
+                final partido = _buildPartido();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => MatchView(partido: partido),
+                  ),
+                );
               }
             : null, // Deshabilitar si no está listo
         style: ElevatedButton.styleFrom(
           backgroundColor: accentColor,
           minimumSize: const Size(double.infinity, 50),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
-        child: const Text('Iniciar Partido', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+        child: const Text('Iniciar Partido',
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold)),
       ),
     );
   }
