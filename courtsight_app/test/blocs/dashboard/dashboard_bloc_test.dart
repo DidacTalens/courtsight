@@ -47,10 +47,12 @@ void main() {
       ],
     );
 
+    String? partidoSeleccionado;
+
     blocTest<DashboardBloc, DashboardState>(
       'invoca onPartidoSeleccionado cuando se selecciona un partido',
       build: () {
-        String? partidoSeleccionado;
+        partidoSeleccionado = null;
         return DashboardBloc(
           partidosProvider: () async => partidosMock,
           onPartidoSeleccionado: (id) => partidoSeleccionado = id,
@@ -62,7 +64,7 @@ void main() {
         bloc.add(DashboardPartidoSeleccionado(partidosMock.first.id));
       },
       verify: (_) {
-        expect(partidosMock.first.id, isNotNull);
+        expect(partidoSeleccionado, equals(partidosMock.first.id));
       },
     );
   });
