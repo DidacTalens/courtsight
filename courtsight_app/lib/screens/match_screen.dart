@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:courtsight/models/models.dart' as models;
 
@@ -45,17 +47,11 @@ class _MatchViewState extends State<MatchView> {
     _tiempoTranscurrido = _partido.tiempoFormateado;
     _localIsAttacking = _partido.equipoEnAtaque == _equipoLocal.id;
 
-    final parciales = _partido.parciales;
-    if (parciales.isEmpty) {
-      _parcialesLocal = const [];
-      _parcialesVisitante = const [];
-      _parcialLabels = const [];
-    } else {
-      _parcialesLocal = parciales.map((p) => p.golesLocal.toString()).toList();
-      _parcialesVisitante =
-          parciales.map((p) => p.golesVisitante.toString()).toList();
-      _parcialLabels = parciales.map((p) => p.rangoTiempo).toList();
-    }
+    _parcialesLocal =
+        _partido.parciales.map((p) => p.golesLocal.toString()).toList();
+    _parcialesVisitante =
+        _partido.parciales.map((p) => p.golesVisitante.toString()).toList();
+    _parcialLabels = _partido.parciales.map((p) => p.rangoTiempo).toList();
   }
 
   void _togglePossession() {
@@ -108,6 +104,12 @@ class _MatchViewState extends State<MatchView> {
   // --- WIDGETS MODULARES ---
 
   Widget _buildScoreHeader() {
+    final String nombreLocal =
+        _equipoLocal.nombre.isEmpty ? 'Equipo Local' : _equipoLocal.nombre;
+    final String nombreVisitante = _equipoVisitante.nombre.isEmpty
+        ? 'Equipo Visitante'
+        : _equipoVisitante.nombre;
+
     return Padding(
       padding: const EdgeInsets.only(
           top: 10.0, left: 16.0, right: 16.0, bottom: 5.0),
@@ -122,10 +124,7 @@ class _MatchViewState extends State<MatchView> {
                       size: 8,
                       color: _localIsAttacking ? accentColor : Colors.white38),
                   const SizedBox(width: 8),
-                  Text(
-                      _equipoLocal.nombre.isEmpty
-                          ? 'Equipo Local'
-                          : _equipoLocal.nombre,
+                  Text(nombreLocal,
                       style: const TextStyle(
                           color: Colors.white,
                           fontSize: 24,
@@ -143,10 +142,7 @@ class _MatchViewState extends State<MatchView> {
               ),
               Row(
                 children: [
-                  Text(
-                      _equipoVisitante.nombre.isEmpty
-                          ? 'Equipo Visitante'
-                          : _equipoVisitante.nombre,
+                  Text(nombreVisitante,
                       style: const TextStyle(
                           color: Colors.white,
                           fontSize: 24,
@@ -188,9 +184,11 @@ class _MatchViewState extends State<MatchView> {
               const SizedBox(width: 80),
               ..._parcialLabels.map(
                 (label) => Expanded(
-                  child: Text(label,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                  child: Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
                 ),
               ),
             ],
@@ -220,83 +218,89 @@ class _MatchViewState extends State<MatchView> {
       child: Row(
         children: [
           SizedBox(
-              width: 80,
-              child: Text(teamName,
-                  style: TextStyle(
-                      color: teamColor, fontWeight: FontWeight.bold))),
-          ...scores.map((score) => Expanded(
-                child: Text(score,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white70)),
-              )),
+            width: 80,
+            child: Text(
+              teamName,
+              style: TextStyle(color: teamColor, fontWeight: FontWeight.bold),
+            ),
+          ),
+          ...scores.map(
+            (score) => Expanded(
+              child: Text(
+                score,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white70),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildHandballPitch() {
-    // La pista debe ser responsiva y ocupar el espacio disponible
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16.0),
       color: primaryDark,
-      child: AspectRatio(
-        aspectRatio: 1.5, // Proporción aproximada de una pista de balonmano
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.white38),
-            borderRadius: BorderRadius.circular(4.0),
-          ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Líneas Centrales y Zonas de 6m/9m (Simplificado)
-              CustomPaint(
-                painter: HandballPitchPainter(),
-                child: Container(),
-              ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final double width = constraints.maxWidth;
+          final double maxHeight = constraints.maxHeight.isFinite
+              ? constraints.maxHeight
+              : MediaQuery.of(context).size.height * 0.35;
+          final double preferredHeight = width / 2.2;
+          final double height = math.min(preferredHeight, maxHeight);
 
-              // ICONO DE PORTERO LOCAL (G1)
-              Positioned(
-                left: MediaQuery.of(context).size.width *
-                    0.05, // Posicionamiento relativo
-                child: _buildKeeperIcon('G1', Colors.blue, true),
+          return SizedBox(
+            width: width,
+            height: height,
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.white38),
+                borderRadius: BorderRadius.circular(4.0),
               ),
-
-              // ICONO DE PORTERO VISITANTE (G2)
-              Positioned(
-                right: MediaQuery.of(context).size.width * 0.05,
-                child: _buildKeeperIcon('G2', Colors.yellow, false),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  CustomPaint(
+                    painter: HandballPitchPainter(),
+                    child: Container(),
+                  ),
+                  Positioned(
+                    left: width * 0.05,
+                    child: _buildKeeperIcon(
+                        'G1', _equipoLocal.colorPorteroColor, true),
+                  ),
+                  Positioned(
+                    right: width * 0.05,
+                    child: _buildKeeperIcon(
+                        'G2', _equipoVisitante.colorPorteroColor, false),
+                  ),
+                  AnimatedRotation(
+                    turns: _localIsAttacking ? 0.0 : 0.5,
+                    duration: const Duration(milliseconds: 300),
+                    child: const Icon(Icons.arrow_forward,
+                        color: accentColor, size: 50),
+                  ),
+                ],
               ),
-
-              // FLECHA DE POSESIÓN
-              AnimatedRotation(
-                turns: _localIsAttacking
-                    ? 0.0
-                    : 0.5, // 0.0 para derecha, 0.5 para izquierda
-                duration: const Duration(milliseconds: 300),
-                child: const Icon(Icons.arrow_forward,
-                    color: accentColor, size: 50),
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
 
   Widget _buildKeeperIcon(String name, Color color, bool isLocal) {
-    final displayColor = isLocal
-        ? _equipoLocal.colorPorteroColor
-        : _equipoVisitante.colorPorteroColor;
     return GestureDetector(
       onTap: () {
         // TODO: Abrir modal para cambiar de portero
-        debugPrint('Abrir selector de portero para $name');
+        print('Abrir selector de portero para $name');
       },
       child: Column(
         children: [
-          Icon(Icons.sports_soccer, color: displayColor, size: 40),
-          Text(name, style: TextStyle(color: displayColor, fontSize: 12)),
+          Icon(Icons.sports_soccer, color: color, size: 40),
+          Text(name, style: TextStyle(color: color, fontSize: 12)),
         ],
       ),
     );
