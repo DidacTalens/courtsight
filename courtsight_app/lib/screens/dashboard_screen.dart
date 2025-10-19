@@ -145,6 +145,7 @@ class _DashboardViewState extends State<DashboardView> {
       partidos: partidos,
       cardColor: cardColor,
       accentColor: accentColor,
+      onMatchTap: (_) => _irAPreparacion(),
     );
   }
 }

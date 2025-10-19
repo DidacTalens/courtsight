@@ -8,11 +8,13 @@ class DashboardMatchList extends StatelessWidget {
     required this.partidos,
     required this.cardColor,
     required this.accentColor,
+    this.onMatchTap,
   });
 
   final List<DashboardMatch> partidos;
   final Color cardColor;
   final Color accentColor;
+  final void Function(DashboardMatch partido)? onMatchTap;
 
   @override
   Widget build(BuildContext context) {
@@ -32,6 +34,7 @@ class DashboardMatchList extends StatelessWidget {
           index: index,
           cardColor: cardColor,
           accentColor: accentColor,
+          onTap: onMatchTap,
         ),
       ),
     );

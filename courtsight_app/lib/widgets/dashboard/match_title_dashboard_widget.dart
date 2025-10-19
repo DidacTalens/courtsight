@@ -62,12 +62,14 @@ class DashboardMatchTile extends StatelessWidget {
     required this.index,
     required this.cardColor,
     required this.accentColor,
+    this.onTap,
   });
 
   final DashboardMatch partido;
   final int index;
   final Color cardColor;
   final Color accentColor;
+  final void Function(DashboardMatch partido)? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -81,8 +83,12 @@ class DashboardMatchTile extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: () {
-          // TODO: Implementar navegación a SetupView o MatchView
-          debugPrint('Abrir partido: ${partido.nombreLocal} vs ${partido.nombreVisitante}');
+          final callback = onTap;
+          if (callback != null) {
+            callback(partido);
+          } else {
+            debugPrint('Abrir partido: ${partido.nombreLocal} vs ${partido.nombreVisitante}');
+          }
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
