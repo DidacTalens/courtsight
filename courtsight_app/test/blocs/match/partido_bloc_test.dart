@@ -7,15 +7,19 @@ import 'package:courtsight/models/equipo.dart';
 import 'package:courtsight/models/jugador.dart';
 import 'package:courtsight/models/partido.dart';
 import 'package:courtsight/models/parcial.dart';
+import 'package:courtsight/models/accion.dart';
+import 'package:courtsight/models/estadisticas.dart';
 
 void main() {
   late Partido partidoInicial;
   late Jugador porteroInicial;
   late Jugador porteroSuplente;
+  late Jugador lanzadorLocal;
 
   Partido crearPartidoBase() {
     porteroInicial = Jugador.create(nombre: 'Portero 1', dorsal: '1');
     porteroSuplente = Jugador.create(nombre: 'Portero 2', dorsal: '12');
+    lanzadorLocal = Jugador.create(nombre: 'Lanzador Local', dorsal: '20');
 
     final equipoLocal = Equipo(
       id: 'local',
@@ -24,7 +28,7 @@ void main() {
       colorPortero: '#00FF00',
       porteroActivoId: porteroInicial.id,
       esLocal: true,
-      roster: [porteroInicial, porteroSuplente],
+      roster: [porteroInicial, porteroSuplente, lanzadorLocal],
     );
 
     final equipoVisitante = Equipo(
@@ -92,6 +96,45 @@ void main() {
       final partido = bloc.state.partido;
       expect(partido, isNotNull);
       expect(partido!.equipoLocal.porteroActivoId, equals(porteroSuplente.id));
+    },
+  );
+
+  blocTest<PartidoBloc, PartidoState>(
+    'registra un 7 metros y actualiza acciones y estadísticas',
+    build: () => PartidoBloc(
+      loadPartido: (_) async => partidoInicial,
+      initialPartido: partidoInicial,
+    ),
+    act: (bloc) => bloc.add(
+      PartidoSieteMetrosRegistrado(
+        equipoPorteroId: partidoInicial.equipoVisitante.id,
+        porteroId: porteroSuplente.id,
+        equipoLanzadorId: partidoInicial.equipoLocal.id,
+        lanzadorId: lanzadorLocal.id,
+        esGol: true,
+        amonestacion: false,
+      ),
+    ),
+    expect: () {
+      final actualizado = partidoInicial.registrarSieteMetros(
+        equipoPorteroId: partidoInicial.equipoVisitante.id,
+        porteroId: porteroSuplente.id,
+        equipoLanzadorId: partidoInicial.equipoLocal.id,
+        lanzadorId: lanzadorLocal.id,
+        esGol: true,
+        amonestacion: false,
+      );
+
+      return [PartidoState.enCurso(partido: actualizado)];
+    },
+    verify: (bloc) {
+      final partido = bloc.state.partido!;
+      expect(partido.acciones, hasLength(1));
+      expect(partido.acciones.first.tipo, AccionTipo.sieteMetros);
+      final JugadorEstadisticas statsLanzador =
+          partido.estadisticasJugadores[lanzadorLocal.id]!;
+      expect(statsLanzador.lanzamientos, 1);
+      expect(statsLanzador.goles, 1);
     },
   );
 }

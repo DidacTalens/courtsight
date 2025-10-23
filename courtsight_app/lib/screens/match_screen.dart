@@ -1,12 +1,14 @@
 import 'dart:math' as math;
 
 import 'package:courtsight/widgets/match/keeper_selector_match_widget.dart';
+import 'package:courtsight/widgets/match/seven_meter_dialog_match_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:courtsight/models/models.dart' as models;
 import 'package:courtsight/blocs/partido/partido_bloc.dart';
 import 'package:courtsight/blocs/partido/partido_event.dart';
 import 'package:courtsight/blocs/partido/partido_state.dart';
+import 'package:intl/intl.dart';
 
 // Definición de colores oscuros para replicar el diseño
 const Color primaryDark = Color(0xFF0A1931);
@@ -386,28 +388,64 @@ class _MatchViewState extends State<MatchView> {
   }
 
   Widget _buildActionButtonsBar() {
-    // ORDEN ESPECIFICADO: 7m, Amonestación, Lanzamiento, Cambio de posesión, Tiempo muerto
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildActionButton(Icons.score, '7m', successColor, () {
-            /* TODO: Modal 7m */ print('Modal 7m');
+          _buildActionButton(Icons.score, '7m', successColor, () async {
+            final resultado = await showDialog<SevenMeterResult>(
+              context: context,
+              builder: (dialogContext) => SevenMeterDialogMatchWidget(
+                equipoLocal: _equipoLocal,
+                equipoVisitante: _equipoVisitante,
+                localAtacando: _localIsAttacking,
+              ),
+            );
+
+            if (resultado != null) {
+              context.read<PartidoBloc>().add(
+                    PartidoSieteMetrosRegistrado(
+                      equipoPorteroId: resultado.equipoPorteroId,
+                      porteroId: resultado.porteroId,
+                      equipoLanzadorId: resultado.equipoLanzadorId,
+                      lanzadorId: resultado.lanzadorId,
+                      esGol: resultado.esGol,
+                      amonestacion: resultado.amonestacion,
+                    ),
+                  );
+            }
           }),
           _buildActionButton(
-              Icons.warning_amber_rounded, 'Amonestación', Colors.orange, () {
-            /* TODO: Modal Amonestación */ print('Modal Amonestación');
-          }),
-          _buildActionButton(Icons.sports_handball, 'Lanzamiento', Colors.teal,
-              () {
-            /* TODO: Modal Lanzamiento */ print('Modal Lanzamiento');
-          }),
-          _buildActionButton(Icons.swap_horiz, 'Posesión', Colors.purple,
-              _togglePossession), // Usa la función de cambio de posesión
-          _buildActionButton(Icons.timer_off, 'Tiempo Muerto', errorColor, () {
-            /* TODO: Lógica Tiempo Muerto */ print('Tiempo Muerto');
-          }),
+            Icons.warning_amber_rounded,
+            'Amonestación',
+            Colors.orange,
+            () {
+              print('Modal Amonestación');
+            },
+          ),
+          _buildActionButton(
+            Icons.sports_handball,
+            'Lanzamiento',
+            Colors.teal,
+            () {
+              print('Modal Lanzamiento');
+            },
+          ),
+          _buildActionButton(
+            Icons.swap_horiz,
+            'Posesión',
+            Colors.purple,
+            _togglePossession,
+          ),
+          _buildActionButton(
+            Icons.timer_off,
+            'Tiempo Muerto',
+            errorColor,
+            () {
+              print('Tiempo Muerto');
+            },
+          ),
         ],
       ),
     );
@@ -439,65 +477,56 @@ class _MatchViewState extends State<MatchView> {
   }
 
   Widget _buildHistoryPanel() {
+    final acciones = _partido.acciones;
+
     return Container(
-      color: primaryDark.withOpacity(0.8), // Panel un poco más oscuro
+      color: primaryDark.withOpacity(0.8),
       padding: const EdgeInsets.all(12.0),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Historial de Acciones',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold)),
-              IconButton(
-                  onPressed: () {/* TODO: Lógica de Edición */},
-                  icon: const Icon(Icons.edit, color: Colors.grey, size: 18))
-            ],
-          ),
-          const Divider(color: Colors.white10),
-
-          // Lista de Acciones
-          Expanded(
-            child: ListView(
-              reverse: true, // Mostrar las más recientes abajo
-              children: [
-                _buildHistoryTile(
-                    'Gol - Equipo A ( Jugador 10 )', '44:58', successColor),
-                _buildHistoryTile(
-                    'Amonestación - Equipo B ( 5 )', '43:12', Colors.orange),
-                _buildHistoryTile(
-                    'Pérdida - Equipo A ( 7 )', '42:30', errorColor),
-                _buildHistoryTile(
-                    'Gol - Equipo B ( 9 )', '41:05', successColor),
-                _buildHistoryTile(
-                    'Gol - Equipo A ( 10 )', '39:45', successColor),
-                // Añadir más tiles aquí para simular el scroll
-                for (int i = 1; i < 20; i++)
-                  _buildHistoryTile('Acción $i', '0$i:00', Colors.grey)
-              ],
+          const Text(
+            'Historial de acciones',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
           ),
-
-          // Botón de Estadísticas en Tiempo Real
-          TextButton.icon(
-            onPressed: () {
-              // TODO: Mostrar el panel de estadísticas en tiempo real (SlidingPanel)
-              print('Abrir estadísticas en tiempo real');
-            },
-            icon: const Icon(Icons.bar_chart, color: Colors.white70),
-            label: const Text('Estadísticas en tiempo real',
-                style: TextStyle(color: Colors.white70)),
+          const SizedBox(height: 12),
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: cardColor,
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+              padding: const EdgeInsets.all(12.0),
+              child: acciones.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'Sin acciones registradas.',
+                        style: TextStyle(color: Colors.white54),
+                      ),
+                    )
+                  : ListView.builder(
+                      reverse: true,
+                      itemCount: acciones.length,
+                      itemBuilder: (context, index) {
+                        final accion = acciones[index];
+                        return _buildHistoryTile(accion);
+                      },
+                    ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildHistoryTile(String action, String time, Color color) {
+  Widget _buildHistoryTile(models.Accion accion) {
+    final color = _historyColor(accion);
+    final timeText = DateFormat('HH:mm:ss').format(accion.timestamp);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
       child: Row(
@@ -507,24 +536,36 @@ class _MatchViewState extends State<MatchView> {
             width: 5,
             height: 35,
             decoration: BoxDecoration(
-                color: color, borderRadius: BorderRadius.circular(2)),
+              color: color,
+              borderRadius: BorderRadius.circular(2),
+            ),
             margin: const EdgeInsets.only(right: 8),
           ),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(action,
-                    style: const TextStyle(color: Colors.white, fontSize: 13)),
-                Text(time,
-                    style:
-                        TextStyle(color: color.withOpacity(0.7), fontSize: 10)),
+                Text(
+                  accion.descripcion,
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                ),
+                Text(
+                  timeText,
+                  style: TextStyle(color: color.withOpacity(0.7), fontSize: 10),
+                ),
               ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  Color _historyColor(models.Accion accion) {
+    switch (accion.tipo) {
+      case models.AccionTipo.sieteMetros:
+        return accion.resultado == 'Gol' ? successColor : errorColor;
+    }
   }
 }
 

@@ -1,6 +1,10 @@
 import 'package:equatable/equatable.dart';
 import 'equipo.dart';
+import 'jugador.dart';
 import 'parcial.dart';
+import 'accion.dart';
+import 'estadisticas.dart';
+import 'package:uuid/uuid.dart';
 
 enum EstadoPartido {
   configuracion,
@@ -36,6 +40,8 @@ class Partido extends Equatable {
   final String? equipoEnAtaque;
   final DateTime fechaCreacion;
   final DateTime? fechaFinalizacion;
+  final List<Accion> acciones;
+  final Map<String, JugadorEstadisticas> estadisticasJugadores;
 
   const Partido({
     required this.id,
@@ -51,6 +57,8 @@ class Partido extends Equatable {
     this.equipoEnAtaque,
     required this.fechaCreacion,
     this.fechaFinalizacion,
+    this.acciones = const [],
+    this.estadisticasJugadores = const {},
   });
 
   factory Partido.create({
@@ -82,6 +90,8 @@ class Partido extends Equatable {
       parciales: parciales,
       equipoEnAtaque: equipoLocal.id,
       fechaCreacion: now,
+      acciones: const [],
+      estadisticasJugadores: const {},
     );
   }
 
@@ -99,6 +109,8 @@ class Partido extends Equatable {
     String? equipoEnAtaque,
     DateTime? fechaCreacion,
     DateTime? fechaFinalizacion,
+    List<Accion>? acciones,
+    Map<String, JugadorEstadisticas>? estadisticasJugadores,
   }) {
     return Partido(
       id: id ?? this.id,
@@ -114,6 +126,9 @@ class Partido extends Equatable {
       equipoEnAtaque: equipoEnAtaque ?? this.equipoEnAtaque,
       fechaCreacion: fechaCreacion ?? this.fechaCreacion,
       fechaFinalizacion: fechaFinalizacion ?? this.fechaFinalizacion,
+      acciones: acciones ?? this.acciones,
+      estadisticasJugadores:
+          estadisticasJugadores ?? this.estadisticasJugadores,
     );
   }
 
@@ -153,6 +168,8 @@ class Partido extends Equatable {
         equipoEnAtaque,
         fechaCreacion,
         fechaFinalizacion,
+        acciones,
+        estadisticasJugadores,
       ];
 
   // Getters de utilidad
@@ -187,6 +204,106 @@ class Partido extends Equatable {
               minutoActual < parcial.minutoFin,
           orElse: () => null,
         );
+  }
+
+  Partido registrarSieteMetros({
+    required String equipoPorteroId,
+    required String porteroId,
+    required String equipoLanzadorId,
+    required String lanzadorId,
+    required bool esGol,
+    bool amonestacion = false,
+  }) {
+    final nuevoUuid = const Uuid();
+    final String descripcion = _descripcionSieteMetros(
+      equipoPorteroId: equipoPorteroId,
+      porteroId: porteroId,
+      equipoLanzadorId: equipoLanzadorId,
+      lanzadorId: lanzadorId,
+      esGol: esGol,
+      amonestacion: amonestacion,
+    );
+
+    final nuevaAccion = Accion(
+      id: nuevoUuid.v4(),
+      tipo: AccionTipo.sieteMetros,
+      descripcion: descripcion,
+      timestamp: DateTime.now(),
+      equipoId: equipoLanzadorId,
+      porteroId: porteroId,
+      lanzadorId: lanzadorId,
+      resultado: esGol ? 'Gol' : 'Fallo',
+      amonestacion: amonestacion,
+    );
+
+    final actualizado = _actualizarEstadisticasSieteMetros(
+      porteroId: porteroId,
+      lanzadorId: lanzadorId,
+      esGol: esGol,
+      amonestacion: amonestacion,
+    );
+
+    return copyWith(
+      acciones: [...acciones, nuevaAccion],
+      estadisticasJugadores: actualizado,
+    );
+  }
+
+  Map<String, JugadorEstadisticas> _actualizarEstadisticasSieteMetros({
+    required String porteroId,
+    required String lanzadorId,
+    required bool esGol,
+    required bool amonestacion,
+  }) {
+    JugadorEstadisticas obtenerStats(String jugadorId) {
+      return estadisticasJugadores[jugadorId] ?? const JugadorEstadisticas();
+    }
+
+    final Map<String, JugadorEstadisticas> actualizado =
+        Map<String, JugadorEstadisticas>.from(estadisticasJugadores);
+
+    actualizado[lanzadorId] = obtenerStats(lanzadorId).incrementar(
+      lanzamientos: 1,
+      goles: esGol ? 1 : 0,
+    );
+
+    if (amonestacion) {
+      actualizado[lanzadorId] =
+          actualizado[lanzadorId]!.incrementar(amonestaciones: 1);
+    }
+
+    actualizado[porteroId] =
+        obtenerStats(porteroId).incrementar(lanzamientos: 1);
+
+    return actualizado;
+  }
+
+  String _descripcionSieteMetros({
+    required String equipoPorteroId,
+    required String porteroId,
+    required String equipoLanzadorId,
+    required String lanzadorId,
+    required bool esGol,
+    required bool amonestacion,
+  }) {
+    final Equipo equipoPortero =
+        equipoLocal.id == equipoPorteroId ? equipoLocal : equipoVisitante;
+    final Equipo equipoLanzador =
+        equipoLocal.id == equipoLanzadorId ? equipoLocal : equipoVisitante;
+
+    final Jugador? portero = equipoPortero.roster.firstWhere(
+      (j) => j.id == porteroId,
+      orElse: () => Jugador.create(nombre: 'Portero', dorsal: ''),
+    );
+    final Jugador? lanzador = equipoLanzador.roster.firstWhere(
+      (j) => j.id == lanzadorId,
+      orElse: () => Jugador.create(nombre: 'Jugador', dorsal: ''),
+    );
+
+    final resultado = esGol ? 'Gol' : 'Fallo';
+    final amonestacionTexto = amonestacion ? ' con Amonestación' : '';
+
+    return '7m $resultado - ${equipoLanzador.nombre} (${lanzador?.dorsal} ${lanzador?.nombre}) vs ${equipoPortero.nombre} (${portero?.dorsal} ${portero?.nombre})$amonestacionTexto';
   }
 
   @override

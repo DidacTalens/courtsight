@@ -29,3 +29,31 @@ class PartidoCambioPortero extends PartidoEvent {
   @override
   List<Object?> get props => [equipoId, nuevoPorteroId];
 }
+
+class PartidoSieteMetrosRegistrado extends PartidoEvent {
+  final String equipoPorteroId;
+  final String porteroId;
+  final String equipoLanzadorId;
+  final String lanzadorId;
+  final bool esGol;
+  final bool amonestacion;
+
+  const PartidoSieteMetrosRegistrado({
+    required this.equipoPorteroId,
+    required this.porteroId,
+    required this.equipoLanzadorId,
+    required this.lanzadorId,
+    required this.esGol,
+    this.amonestacion = false,
+  });
+
+  @override
+  List<Object?> get props => [
+        equipoPorteroId,
+        porteroId,
+        equipoLanzadorId,
+        lanzadorId,
+        esGol,
+        amonestacion,
+      ];
+}

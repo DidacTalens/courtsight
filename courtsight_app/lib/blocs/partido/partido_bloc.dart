@@ -12,6 +12,7 @@ class PartidoBloc extends Bloc<PartidoEvent, PartidoState> {
             : const PartidoState.inicial()) {
     on<PartidoLoadRequested>(_onLoadRequested);
     on<PartidoCambioPortero>(_onCambioPortero);
+    on<PartidoSieteMetrosRegistrado>(_onSieteMetrosRegistrado);
   }
 
   Future<void> _onLoadRequested(
@@ -37,6 +38,25 @@ class PartidoBloc extends Bloc<PartidoEvent, PartidoState> {
     final partidoActualizado = partidoActual.cambiarPortero(
       equipoId: event.equipoId,
       nuevoPorteroId: event.nuevoPorteroId,
+    );
+
+    emit(PartidoState.enCurso(partido: partidoActualizado));
+  }
+
+  void _onSieteMetrosRegistrado(
+    PartidoSieteMetrosRegistrado event,
+    Emitter<PartidoState> emit,
+  ) {
+    final partidoActual = state.partido;
+    if (partidoActual == null) return;
+
+    final partidoActualizado = partidoActual.registrarSieteMetros(
+      equipoPorteroId: event.equipoPorteroId,
+      porteroId: event.porteroId,
+      equipoLanzadorId: event.equipoLanzadorId,
+      lanzadorId: event.lanzadorId,
+      esGol: event.esGol,
+      amonestacion: event.amonestacion,
     );
 
     emit(PartidoState.enCurso(partido: partidoActualizado));
