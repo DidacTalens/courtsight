@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 import 'package:courtsight/models/jugador.dart';
 
 class Equipo extends Equatable {
@@ -7,6 +8,7 @@ class Equipo extends Equatable {
   final String nombre;
   final String colorUniforme;
   final String colorPortero;
+  final String porteroActivoId;
   final bool esLocal;
   final List<Jugador> roster;
 
@@ -15,22 +17,27 @@ class Equipo extends Equatable {
     required this.nombre,
     required this.colorUniforme,
     required this.colorPortero,
+    required this.porteroActivoId,
     required this.esLocal,
     this.roster = const [],
   });
+
+  static final Uuid _uuid = const Uuid();
 
   factory Equipo.create({
     required String nombre,
     String colorUniforme = '#FF0000',
     String colorPortero = '#00FF00',
+    required String porteroActivoId,
     bool esLocal = true,
     List<Jugador> roster = const [],
   }) {
     return Equipo(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: _uuid.v4(),
       nombre: nombre,
       colorUniforme: colorUniforme,
       colorPortero: colorPortero,
+      porteroActivoId: porteroActivoId,
       esLocal: esLocal,
       roster: List<Jugador>.unmodifiable(roster),
     );
@@ -41,6 +48,7 @@ class Equipo extends Equatable {
       nombre: '',
       colorUniforme: esLocal ? '#FF0000' : '#0000FF',
       colorPortero: '#00FF00',
+      porteroActivoId: '',
       esLocal: esLocal,
       roster: const [],
     );
@@ -51,6 +59,7 @@ class Equipo extends Equatable {
     String? nombre,
     String? colorUniforme,
     String? colorPortero,
+    String? porteroActivoId,
     bool? esLocal,
     List<Jugador>? roster,
   }) {
@@ -59,6 +68,7 @@ class Equipo extends Equatable {
       nombre: nombre ?? this.nombre,
       colorUniforme: colorUniforme ?? this.colorUniforme,
       colorPortero: colorPortero ?? this.colorPortero,
+      porteroActivoId: porteroActivoId ?? this.porteroActivoId,
       esLocal: esLocal ?? this.esLocal,
       roster: roster != null ? List<Jugador>.unmodifiable(roster) : this.roster,
     );
@@ -74,6 +84,7 @@ class Equipo extends Equatable {
         nombre,
         colorUniforme,
         colorPortero,
+        porteroActivoId,
         esLocal,
         _rosterSignature,
       ];

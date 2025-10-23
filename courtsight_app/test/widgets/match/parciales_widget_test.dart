@@ -7,17 +7,19 @@ void main() {
   group('ParcialesWidget - US002: Visualización de Parciales de 5 Minutos', () {
     late Partido partidoMock;
     late List<Parcial> parcialesMock;
-    
+
     setUp(() {
       final equipoLocal = Equipo.create(
         nombre: 'Equipo Local',
         esLocal: true,
+        porteroActivoId: '1',
       );
       final equipoVisitante = Equipo.create(
-        nombre: 'Equipo Visitante', 
+        nombre: 'Equipo Visitante',
         esLocal: false,
+        porteroActivoId: '2',
       );
-      
+
       // Crear parciales de ejemplo según el scenario
       parcialesMock = [
         Parcial.create(
@@ -39,7 +41,7 @@ void main() {
           golesVisitante: 1,
         ),
       ];
-      
+
       partidoMock = Partido.create(
         equipoLocal: equipoLocal,
         equipoVisitante: equipoVisitante,
@@ -52,7 +54,8 @@ void main() {
       );
     });
 
-    testWidgets('debe mostrar todos los parciales de 5 minutos', (tester) async {
+    testWidgets('debe mostrar todos los parciales de 5 minutos',
+        (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -76,7 +79,7 @@ void main() {
       );
 
       expect(find.text('2-1'), findsOneWidget);
-      expect(find.text('2-2'), findsOneWidget); 
+      expect(find.text('2-2'), findsOneWidget);
       expect(find.text('1-1'), findsOneWidget);
     });
 
@@ -91,7 +94,7 @@ void main() {
 
       final parcialActualFinder = find.text('10-15\'');
       expect(parcialActualFinder, findsOneWidget);
-      
+
       final parcialActualWidget = tester.widget<Text>(parcialActualFinder);
       expect(parcialActualWidget.style?.fontWeight, FontWeight.bold);
     });

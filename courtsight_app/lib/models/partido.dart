@@ -117,6 +117,27 @@ class Partido extends Equatable {
     );
   }
 
+  Partido cambiarPortero(
+      {required String equipoId, required String nuevoPorteroId}) {
+    final bool esLocal = equipoLocal.id == equipoId;
+    final bool esVisitante = equipoVisitante.id == equipoId;
+
+    if (!esLocal && !esVisitante) {
+      return this;
+    }
+
+    if (esLocal) {
+      return copyWith(
+        equipoLocal: equipoLocal.copyWith(porteroActivoId: nuevoPorteroId),
+      );
+    }
+
+    return copyWith(
+      equipoVisitante:
+          equipoVisitante.copyWith(porteroActivoId: nuevoPorteroId),
+    );
+  }
+
   @override
   List<Object?> get props => [
         id,
@@ -135,35 +156,37 @@ class Partido extends Equatable {
       ];
 
   // Getters de utilidad
-  String get nombreCompleto => '${equipoLocal.nombre} vs ${equipoVisitante.nombre}';
-  
+  String get nombreCompleto =>
+      '${equipoLocal.nombre} vs ${equipoVisitante.nombre}';
+
   int get minutoActual => tiempoTranscurrido ~/ 60;
-  
+
   int get segundoActual => tiempoTranscurrido % 60;
-  
+
   String get tiempoFormateado {
     final minutos = minutoActual.toString().padLeft(2, '0');
     final segundos = segundoActual.toString().padLeft(2, '0');
     return '$minutos:$segundos';
   }
-  
+
   String get marcadorFormateado => '$marcadorLocal - $marcadorVisitante';
-  
+
   bool get estaEnCurso => estado == EstadoPartido.enCurso;
-  
+
   bool get estaFinalizado => estado == EstadoPartido.finalizado;
-  
+
   bool get estaPausado => estado == EstadoPartido.pausado;
-  
+
   bool get equipoLocalAtacando => equipoEnAtaque == equipoLocal.id;
 
   Parcial? get parcialActual {
     return parciales.cast<Parcial?>().firstWhere(
-      (parcial) => parcial != null &&
-          minutoActual >= parcial.minutoInicio &&
-          minutoActual < parcial.minutoFin,
-      orElse: () => null,
-    );
+          (parcial) =>
+              parcial != null &&
+              minutoActual >= parcial.minutoInicio &&
+              minutoActual < parcial.minutoFin,
+          orElse: () => null,
+        );
   }
 
   @override

@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:uuid/uuid.dart';
 
 class Jugador extends Equatable {
   const Jugador({
@@ -7,12 +8,14 @@ class Jugador extends Equatable {
     required this.dorsal,
   });
 
+  static final Uuid _uuid = const Uuid();
+
   factory Jugador.create({
     String nombre = '',
     String dorsal = '',
   }) {
     return Jugador(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: _uuid.v4(),
       nombre: nombre,
       dorsal: dorsal,
     );

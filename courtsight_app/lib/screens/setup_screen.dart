@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:courtsight/models/models.dart' as models;
 import 'package:courtsight/screens/match_screen.dart';
 import 'package:courtsight/models/jugador.dart' as models;
+import 'package:courtsight/blocs/partido/partido_bloc.dart';
 
 class SetupScreen extends StatelessWidget {
   const SetupScreen({super.key});
@@ -220,6 +222,7 @@ class _SetupViewState extends State<SetupView> {
       nombre: nombre.trim(),
       colorUniforme: toHex(colorJugadores),
       colorPortero: toHex(colorPortero),
+      porteroActivoId: '1',
       esLocal: esLocal,
       roster: jugadoresFiltrados,
     );
@@ -242,10 +245,12 @@ class _SetupViewState extends State<SetupView> {
       roster: _visitorRoster,
     );
 
-    return models.Partido.create(
+    final partido = models.Partido.create(
       equipoLocal: equipoLocal,
       equipoVisitante: equipoVisitante,
     );
+
+    return partido.copyWith(estado: models.EstadoPartido.enCurso);
   }
 
   // Verifica si el botón Iniciar Partido debe estar activo
@@ -502,7 +507,13 @@ class _SetupViewState extends State<SetupView> {
                 final partido = _buildPartido();
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => MatchView(partido: partido),
+                    builder: (_) => BlocProvider(
+                      create: (_) => PartidoBloc(
+                        loadPartido: (_) async => partido,
+                        initialPartido: partido,
+                      ),
+                      child: MatchView(partido: partido),
+                    ),
                   ),
                 );
               }

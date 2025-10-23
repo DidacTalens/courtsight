@@ -10,8 +10,10 @@ void main() {
     late List<Partido> partidosMock;
 
     setUp(() {
-      final equipoLocal = Equipo.create(nombre: 'Equipo Local');
-      final equipoVisitante = Equipo.create(nombre: 'Equipo Visitante', esLocal: false);
+      final equipoLocal =
+          Equipo.create(nombre: 'Equipo Local', porteroActivoId: '1');
+      final equipoVisitante = Equipo.create(
+          nombre: 'Equipo Visitante', esLocal: false, porteroActivoId: '2');
 
       partidosMock = [
         Partido.create(

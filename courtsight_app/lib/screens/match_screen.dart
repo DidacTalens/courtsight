@@ -1,7 +1,12 @@
 import 'dart:math' as math;
 
+import 'package:courtsight/widgets/match/keeper_selector_match_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:courtsight/models/models.dart' as models;
+import 'package:courtsight/blocs/partido/partido_bloc.dart';
+import 'package:courtsight/blocs/partido/partido_event.dart';
+import 'package:courtsight/blocs/partido/partido_state.dart';
 
 // Definición de colores oscuros para replicar el diseño
 const Color primaryDark = Color(0xFF0A1931);
@@ -38,20 +43,25 @@ class _MatchViewState extends State<MatchView> {
   @override
   void initState() {
     super.initState();
-    _partido = widget.partido;
-    _equipoLocal = _partido.equipoLocal;
-    _equipoVisitante = _partido.equipoVisitante;
+    _syncFromPartido(widget.partido);
+  }
 
-    _marcadorLocal = _partido.marcadorLocal;
-    _marcadorVisitante = _partido.marcadorVisitante;
-    _tiempoTranscurrido = _partido.tiempoFormateado;
-    _localIsAttacking = _partido.equipoEnAtaque == _equipoLocal.id;
+  void _syncFromPartido(models.Partido partido) {
+    _partido = partido;
+    _equipoLocal = partido.equipoLocal;
+    _equipoVisitante = partido.equipoVisitante;
+
+    _marcadorLocal = partido.marcadorLocal;
+    _marcadorVisitante = partido.marcadorVisitante;
+    _tiempoTranscurrido = partido.tiempoFormateado;
+    _localIsAttacking = partido.equipoEnAtaque != null &&
+        partido.equipoEnAtaque == partido.equipoLocal.id;
 
     _parcialesLocal =
-        _partido.parciales.map((p) => p.golesLocal.toString()).toList();
+        partido.parciales.map((p) => p.golesLocal.toString()).toList();
     _parcialesVisitante =
-        _partido.parciales.map((p) => p.golesVisitante.toString()).toList();
-    _parcialLabels = _partido.parciales.map((p) => p.rangoTiempo).toList();
+        partido.parciales.map((p) => p.golesVisitante.toString()).toList();
+    _parcialLabels = partido.parciales.map((p) => p.rangoTiempo).toList();
   }
 
   void _togglePossession() {
@@ -62,43 +72,52 @@ class _MatchViewState extends State<MatchView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: primaryDark,
-      body: SafeArea(
-        child: Row(
-          children: [
-            // --- COLUMNA 1: Marcador, Pista y Botones de Acción (Aprox. 70%) ---
-            Expanded(
-              flex: 7,
-              child: Column(
-                children: [
-                  // 1. Encabezado del Marcador
-                  _buildScoreHeader(),
+    return BlocListener<PartidoBloc, PartidoState>(
+        listener: (context, state) {
+          final partido = state.partido;
+          if (partido != null && partido != _partido) {
+            setState(() {
+              _syncFromPartido(partido);
+            });
+          }
+        },
+        child: Scaffold(
+          backgroundColor: primaryDark,
+          body: SafeArea(
+            child: Row(
+              children: [
+                // --- COLUMNA 1: Marcador, Pista y Botones de Acción (Aprox. 70%) ---
+                Expanded(
+                  flex: 7,
+                  child: Column(
+                    children: [
+                      // 1. Encabezado del Marcador
+                      _buildScoreHeader(),
 
-                  // 2. Tabla de Parciales
-                  _buildParcialsTable(),
-                  const SizedBox(height: 20),
+                      // 2. Tabla de Parciales
+                      _buildParcialsTable(),
+                      const SizedBox(height: 20),
 
-                  // 3. Pista de Balonmano
-                  Expanded(
-                    child: _buildHandballPitch(),
+                      // 3. Pista de Balonmano
+                      Expanded(
+                        child: _buildHandballPitch(),
+                      ),
+
+                      // 4. Botones de Acción (Barra inferior)
+                      _buildActionButtonsBar(),
+                    ],
                   ),
+                ),
 
-                  // 4. Botones de Acción (Barra inferior)
-                  _buildActionButtonsBar(),
-                ],
-              ),
+                // --- COLUMNA 2: Historial de Acciones (Aprox. 30%) ---
+                Expanded(
+                  flex: 3,
+                  child: _buildHistoryPanel(),
+                ),
+              ],
             ),
-
-            // --- COLUMNA 2: Historial de Acciones (Aprox. 30%) ---
-            Expanded(
-              flex: 3,
-              child: _buildHistoryPanel(),
-            ),
-          ],
-        ),
-      ),
-    );
+          ),
+        ));
   }
 
   // --- WIDGETS MODULARES ---
@@ -120,9 +139,18 @@ class _MatchViewState extends State<MatchView> {
             children: [
               Row(
                 children: [
-                  Icon(Icons.circle,
-                      size: 8,
-                      color: _localIsAttacking ? accentColor : Colors.white38),
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _equipoLocal.color,
+                      border: Border.all(
+                        color: _localIsAttacking ? accentColor : Colors.white38,
+                        width: _localIsAttacking ? 2 : 1,
+                      ),
+                    ),
+                  ),
                   const SizedBox(width: 8),
                   Text(nombreLocal,
                       style: const TextStyle(
@@ -132,7 +160,7 @@ class _MatchViewState extends State<MatchView> {
                 ],
               ),
               Expanded(
-                child: Text('$_marcadorLocal - $_marcadorVisitante',
+                child: Text('$_marcadorLocal-$_marcadorVisitante',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                         color: Colors.white,
@@ -148,9 +176,19 @@ class _MatchViewState extends State<MatchView> {
                           fontSize: 24,
                           fontWeight: FontWeight.bold)),
                   const SizedBox(width: 8),
-                  Icon(Icons.circle,
-                      size: 8,
-                      color: !_localIsAttacking ? accentColor : Colors.white38),
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _equipoVisitante.color,
+                      border: Border.all(
+                        color:
+                            !_localIsAttacking ? accentColor : Colors.white38,
+                        width: !_localIsAttacking ? 2 : 1,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -269,12 +307,16 @@ class _MatchViewState extends State<MatchView> {
                   Positioned(
                     left: width * 0.05,
                     child: _buildKeeperIcon(
-                        'G1', _equipoLocal.colorPorteroColor, true),
+                      equipo: _equipoLocal,
+                      isLocal: true,
+                    ),
                   ),
                   Positioned(
                     right: width * 0.05,
                     child: _buildKeeperIcon(
-                        'G2', _equipoVisitante.colorPorteroColor, false),
+                      equipo: _equipoVisitante,
+                      isLocal: false,
+                    ),
                   ),
                   AnimatedRotation(
                     turns: _localIsAttacking ? 0.0 : 0.5,
@@ -291,16 +333,53 @@ class _MatchViewState extends State<MatchView> {
     );
   }
 
-  Widget _buildKeeperIcon(String name, Color color, bool isLocal) {
+  Widget _buildKeeperIcon(
+      {required models.Equipo equipo, required bool isLocal}) {
+    final models.Jugador? porteroActivo =
+        equipo.roster.cast<models.Jugador?>().firstWhere(
+              (jugador) => jugador?.id == equipo.porteroActivoId,
+              orElse: () => null,
+            );
+
+    final String nombrePortero =
+        porteroActivo != null && porteroActivo.nombre.isNotEmpty
+            ? porteroActivo.nombre
+            : 'Portero';
+    final String dorsalPortero =
+        porteroActivo != null && porteroActivo.dorsal.isNotEmpty
+            ? '#${porteroActivo.dorsal}'
+            : '';
+
     return GestureDetector(
-      onTap: () {
-        // TODO: Abrir modal para cambiar de portero
-        print('Abrir selector de portero para $name');
+      onTap: () async {
+        final partidoBloc = context.read<PartidoBloc>();
+        await showDialog(
+          context: context,
+          builder: (dialogContext) {
+            return KeeperSelectorModal(
+              equipo: equipo,
+              onKeeperSelected: (jugadorId) {
+                partidoBloc.add(
+                  PartidoCambioPortero(
+                    equipoId: equipo.id,
+                    nuevoPorteroId: jugadorId,
+                  ),
+                );
+              },
+            );
+          },
+        );
       },
       child: Column(
         children: [
-          Icon(Icons.sports_soccer, color: color, size: 40),
-          Text(name, style: TextStyle(color: color, fontSize: 12)),
+          Icon(Icons.shield, color: equipo.colorPorteroColor, size: 42),
+          const SizedBox(height: 4),
+          Text(nombrePortero,
+              style: TextStyle(color: equipo.colorPorteroColor, fontSize: 12)),
+          if (dorsalPortero.isNotEmpty)
+            Text(dorsalPortero,
+                style:
+                    TextStyle(color: equipo.colorPorteroColor, fontSize: 12)),
         ],
       ),
     );

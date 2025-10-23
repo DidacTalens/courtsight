@@ -6,17 +6,19 @@ import 'package:courtsight/models/models.dart';
 void main() {
   group('MarcadorWidget - US001: Marcador y Tiempo Siempre Visibles', () {
     late Partido partidoMock;
-    
+
     setUp(() {
       final equipoLocal = Equipo.create(
         nombre: 'Equipo Local',
         esLocal: true,
+        porteroActivoId: '1',
       );
       final equipoVisitante = Equipo.create(
-        nombre: 'Equipo Visitante', 
+        nombre: 'Equipo Visitante',
         esLocal: false,
+        porteroActivoId: '2',
       );
-      
+
       partidoMock = Partido.create(
         equipoLocal: equipoLocal,
         equipoVisitante: equipoVisitante,
@@ -28,7 +30,8 @@ void main() {
       );
     });
 
-    testWidgets('debe mostrar el marcador con formato correcto', (tester) async {
+    testWidgets('debe mostrar el marcador con formato correcto',
+        (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -67,7 +70,8 @@ void main() {
       expect(find.text('Equipo Visitante'), findsOneWidget);
     });
 
-    testWidgets('debe tener texto grande y visible para el marcador', (tester) async {
+    testWidgets('debe tener texto grande y visible para el marcador',
+        (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -78,7 +82,7 @@ void main() {
 
       final marcadorLocalFinder = find.text('5');
       final marcadorLocalWidget = tester.widget<Text>(marcadorLocalFinder);
-      
+
       expect(marcadorLocalWidget.style?.fontSize, greaterThanOrEqualTo(32.0));
     });
   });
